@@ -27,6 +27,8 @@ export async function connectDb() {
     cached!.promise = mongoose.connect(mongoUri, {
       dbName: process.env.MONGODB_DB || "crm_v1",
       autoIndex: true,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
     });
   }
 

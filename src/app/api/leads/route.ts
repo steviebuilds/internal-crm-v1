@@ -1,5 +1,6 @@
 import { isAuthenticatedFromCookies } from "@/lib/auth";
 import { connectDb } from "@/lib/db";
+import { getErrorMessage } from "@/lib/errors";
 import { badRequest, ok, unauthorized, serialize } from "@/lib/http";
 import { LeadModel } from "@/lib/models/Lead";
 import { leadInputSchema } from "@/lib/validation";
@@ -8,27 +9,34 @@ import { getFollowUpBuckets, getPipelineCounts, listLeads } from "@/lib/services
 export async function GET(req: Request) {
   if (!(await isAuthenticatedFromCookies())) return unauthorized();
 
-  const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q") || undefined;
-  const status = searchParams.get("status") || undefined;
-  const priority = searchParams.get("priority") || undefined;
-  const withMeta = searchParams.get("withMeta") === "1";
+  try {
+    const { searchParams } = new URL(req.url);
+    const q = searchParams.get("q") || undefined;
+    const status = searchParams.get("status") || undefined;
+    const priority = searchParams.get("priority") || undefined;
+    const withMeta = searchParams.get("withMeta") === "1";
 
-  const leads = await listLeads({ q, status, priority });
-  if (!withMeta) return ok(serialize(leads));
+    const leads = await listLeads({ q, status, priority });
+    if (!withMeta) return ok(serialize(leads));
 
-  const [pipeline, followUps] = await Promise.all([
-    getPipelineCounts(),
-    getFollowUpBuckets(),
-  ]);
+    const [pipeline, followUps] = await Promise.all([
+      getPipelineCounts(),
+      getFollowUpBuckets(),
+    ]);
 
-  return ok(
-    serialize({
-      leads,
-      pipeline,
-      followUps,
-    }),
-  );
+    return ok(
+      serialize({
+        leads,
+        pipeline,
+        followUps,
+      }),
+    );
+  } catch (error) {
+    return Response.json(
+      { error: "Failed to load leads", details: getErrorMessage(error) },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(req: Request) {

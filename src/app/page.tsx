@@ -63,18 +63,23 @@ export default function HomePage() {
     if (statusFilter) params.set("status", statusFilter);
     if (priorityFilter) params.set("priority", priorityFilter);
 
-    const res = await fetch(`/api/leads?${params.toString()}`);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/leads?${params.toString()}`);
+      setLoading(false);
 
-    if (!res.ok) {
-      setError("Failed to load leads");
-      return;
+      if (!res.ok) {
+        setError("Failed to load leads");
+        return;
+      }
+
+      const data = (await res.json()) as MetaPayload;
+      setLeads(data.leads || []);
+      setPipeline(data.pipeline || []);
+      setFollowUps(data.followUps || { overdue: [], dueToday: [] });
+    } catch {
+      setLoading(false);
+      setError("CRM backend unavailable. Check Mongo connectivity.");
     }
-
-    const data = (await res.json()) as MetaPayload;
-    setLeads(data.leads || []);
-    setPipeline(data.pipeline || []);
-    setFollowUps(data.followUps || { overdue: [], dueToday: [] });
   }
 
   useEffect(() => {
