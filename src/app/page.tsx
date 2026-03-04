@@ -161,7 +161,11 @@ export default function HomePage() {
     await loadDashboard(1, pageSize);
   }
 
-  async function deleteCompany(id: string) {
+  async function deleteCompany(id: string, name: string) {
+    if (!window.confirm(`Delete ${name}? This will permanently remove the company, all people, and all timeline activity.`)) {
+      return;
+    }
+
     const res = await fetch(`/api/companies/${id}`, { method: "DELETE" });
     if (!res.ok) {
       setError("Failed to delete company");
@@ -377,7 +381,7 @@ export default function HomePage() {
                         <td className="px-3 py-3">
                           <div className="flex gap-2">
                             <Link href={`/companies/${company._id}`} className="rounded-md border border-slate-300 px-2 py-1 text-indigo-700 transition hover:bg-indigo-50">Details</Link>
-                            <button className="rounded-md border border-rose-200 px-2 py-1 text-rose-700 transition hover:bg-rose-50" onClick={() => deleteCompany(company._id)}>Delete</button>
+                            <button className="rounded-md border border-rose-200 px-2 py-1 text-rose-700 transition hover:bg-rose-50" onClick={() => deleteCompany(company._id, company.name)}>Delete</button>
                           </div>
                         </td>
                       </tr>

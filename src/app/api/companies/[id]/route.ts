@@ -2,7 +2,9 @@ import { isAuthenticatedFromCookies } from "@/lib/auth";
 import { addStatusChangeActivity } from "@/lib/services/companies";
 import { badRequest, notFound, ok, serialize, unauthorized } from "@/lib/http";
 import { connectDb } from "@/lib/db";
+import { ActivityModel } from "@/lib/models/Activity";
 import { CompanyModel } from "@/lib/models/Company";
+import { PersonModel } from "@/lib/models/Person";
 import { companyPatchSchema } from "@/lib/validation";
 
 export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -47,5 +49,11 @@ export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> 
 
   const deleted = await CompanyModel.findByIdAndDelete(id);
   if (!deleted) return notFound();
+
+  await Promise.all([
+    PersonModel.deleteMany({ companyId: id }),
+    ActivityModel.deleteMany({ companyId: id }),
+  ]);
+
   return ok({ success: true });
 }
