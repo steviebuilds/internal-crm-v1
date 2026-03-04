@@ -1,4 +1,4 @@
-# CRM v1 (internal)
+# Wahlu CRM
 
 Company-first outreach CRM built with Next.js 16, TypeScript, Tailwind, and MongoDB.
 

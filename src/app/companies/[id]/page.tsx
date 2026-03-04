@@ -226,13 +226,13 @@ export default function CompanyPage() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-4 p-6">
-      <div className="flex items-center justify-between">
+    <main className="mx-auto max-w-5xl space-y-5 p-6 md:p-8">
+      <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Company details</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Company workspace</h1>
           {company ? <p className="text-sm text-slate-600">{company.name}</p> : null}
         </div>
-        <Link href="/" className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm">Back</Link>
+        <Link href="/" className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50">Back</Link>
       </div>
 
       {error ? <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div> : null}
@@ -274,7 +274,7 @@ export default function CompanyPage() {
             <span className="mb-1 block font-medium text-slate-700">Notes</span>
             <textarea className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2" value={form.notes} onChange={(e) => setForm((f) => (f ? { ...f, notes: e.target.value } : f))} />
           </label>
-          <button disabled={savingCompany} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">{savingCompany ? "Saving..." : "Save company"}</button>
+          <button disabled={savingCompany} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60">{savingCompany ? "Saving..." : "Save company"}</button>
         </form>
       ) : null}
 
@@ -296,7 +296,7 @@ export default function CompanyPage() {
             <span className="mb-1 block font-medium text-slate-700">Notes</span>
             <textarea value={personForm.notes} onChange={(e) => setPersonForm((p) => ({ ...p, notes: e.target.value }))} className="min-h-20 w-full rounded-lg border border-slate-300 px-3 py-2" />
           </label>
-          <button className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white md:col-span-2">Add person</button>
+          <button className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 md:col-span-2">Add person</button>
         </form>
 
         {people.map((person) => (
@@ -308,7 +308,7 @@ export default function CompanyPage() {
                 <div className="text-xs text-slate-600">{(person.emails || []).join(", ") || "No emails"}</div>
                 <div className="text-xs text-slate-600">{(person.phones || []).join(", ") || "No phones"}</div>
               </div>
-              <button className="text-rose-600 text-sm" onClick={() => removePerson(person._id)}>Remove</button>
+              <button className="rounded-md border border-rose-200 px-2 py-1 text-sm text-rose-700 transition hover:bg-rose-50" onClick={() => removePerson(person._id)}>Remove</button>
             </div>
           </div>
         ))}

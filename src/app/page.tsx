@@ -212,15 +212,15 @@ export default function HomePage() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 p-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <main className="mx-auto max-w-7xl space-y-8 p-6 md:p-8">
+      <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
-          <h1 className="text-3xl font-semibold text-slate-900">CRM v1</h1>
-          <p className="text-sm text-slate-600">Company-centric pipeline with linked people.</p>
+          <h1 className="text-3xl font-semibold text-slate-900">Wahlu CRM</h1>
+          <p className="text-sm text-slate-600">Company pipeline, contacts, and follow-up command center.</p>
         </div>
         <button
           onClick={logout}
-          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50"
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
         >
           Log out
         </button>
@@ -230,7 +230,7 @@ export default function HomePage() {
         <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>
       ) : null}
 
-      <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-3">
+      <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-3">
         <BucketCard title="Overdue" items={followUps.overdue} onAction={followUpAction} accent="rose" />
         <BucketCard title="Due today" items={followUps.dueToday} onAction={followUpAction} accent="amber" />
         <div className="rounded-xl border border-slate-200 p-3">
@@ -305,7 +305,7 @@ export default function HomePage() {
             />
           </label>
 
-          <button disabled={saving} className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white">
+          <button disabled={saving} className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60">
             {saving ? "Saving..." : "Create company"}
           </button>
         </form>
@@ -328,56 +328,56 @@ export default function HomePage() {
                 setPage(1);
                 loadDashboard(1, pageSize);
               }}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
             >
               Apply
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
             <table className="min-w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-600">
-                  <th className="px-2 py-2">Company</th>
-                  <th className="px-2 py-2">IG</th>
-                  <th className="px-2 py-2">Primary contact</th>
-                  <th className="px-2 py-2">Phone</th>
-                  <th className="px-2 py-2">Status</th>
-                  <th className="px-2 py-2">Priority</th>
-                  <th className="px-2 py-2">Actions</th>
+              <thead className="bg-slate-50">
+                <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-600">
+                  <th className="px-3 py-3">Company</th>
+                  <th className="px-3 py-3">IG</th>
+                  <th className="px-3 py-3">Primary contact</th>
+                  <th className="px-3 py-3">Phone</th>
+                  <th className="px-3 py-3">Status</th>
+                  <th className="px-3 py-3">Priority</th>
+                  <th className="px-3 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td className="px-2 py-4 text-slate-500" colSpan={7}>Loading companies...</td></tr>
+                  <tr><td className="px-3 py-4 text-slate-500" colSpan={7}>Loading companies...</td></tr>
                 ) : companies.length === 0 ? (
-                  <tr><td className="px-2 py-4 text-slate-500" colSpan={7}>No companies found.</td></tr>
+                  <tr><td className="px-3 py-4 text-slate-500" colSpan={7}>No companies found.</td></tr>
                 ) : (
                   companies.map((company) => {
                     const primary = company.primaryContact;
                     const phone = primary?.phones?.[0] || company.phones?.[0] || "—";
                     return (
-                      <tr key={company._id} className="border-b border-slate-100">
-                        <td className="px-2 py-2">
+                      <tr key={company._id} className="border-b border-slate-100 bg-white align-top transition hover:bg-slate-50/70">
+                        <td className="px-3 py-3">
                           <div className="font-medium text-slate-900">{company.name}</div>
                           <div className="text-xs text-slate-500">{company.emails?.[0] || ""}</div>
                         </td>
-                        <td className="px-2 py-2 text-xs">{company.instagramHandle || "—"}</td>
-                        <td className="px-2 py-2">
+                        <td className="px-3 py-3 text-xs">{company.instagramHandle || "—"}</td>
+                        <td className="px-3 py-3">
                           <div>{primary?.fullName || "—"}</div>
                           <div className="text-xs text-slate-500">{primary?.emails?.[0] || ""}</div>
                         </td>
-                        <td className="px-2 py-2">{phone}</td>
-                        <td className="px-2 py-2">
-                          <select className="rounded-md border border-slate-300 px-2 py-1" value={company.status} onChange={(e) => updateStatus(company._id, e.target.value)}>
+                        <td className="px-3 py-3">{phone}</td>
+                        <td className="px-3 py-3">
+                          <select className="rounded-md border border-slate-300 bg-white px-2 py-1" value={company.status} onChange={(e) => updateStatus(company._id, e.target.value)}>
                             {COMPANY_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                           </select>
                         </td>
-                        <td className="px-2 py-2">{company.priority}</td>
-                        <td className="px-2 py-2">
-                          <div className="flex gap-3">
-                            <Link href={`/companies/${company._id}`} className="text-indigo-600">Details</Link>
-                            <button className="text-rose-600" onClick={() => deleteCompany(company._id)}>Delete</button>
+                        <td className="px-3 py-3">{company.priority}</td>
+                        <td className="px-3 py-3">
+                          <div className="flex gap-2">
+                            <Link href={`/companies/${company._id}`} className="rounded-md border border-slate-300 px-2 py-1 text-indigo-700 transition hover:bg-indigo-50">Details</Link>
+                            <button className="rounded-md border border-rose-200 px-2 py-1 text-rose-700 transition hover:bg-rose-50" onClick={() => deleteCompany(company._id)}>Delete</button>
                           </div>
                         </td>
                       </tr>
@@ -395,8 +395,8 @@ export default function HomePage() {
               <select value={pageSize} onChange={(e) => { const nextSize = Number(e.target.value); setPageSize(nextSize); setPage(1); loadDashboard(1, nextSize); }} className="rounded-md border border-slate-300 px-2 py-1">
                 {[25, 50, 100, 200].map((size) => <option key={size} value={size}>{size}</option>)}
               </select>
-              <button disabled={page <= 1 || loading} onClick={() => loadDashboard(page - 1, pageSize)} className="rounded-md border border-slate-300 px-3 py-1.5 disabled:opacity-50">Prev</button>
-              <button disabled={page >= totalPages || loading} onClick={() => loadDashboard(page + 1, pageSize)} className="rounded-md border border-slate-300 px-3 py-1.5 disabled:opacity-50">Next</button>
+              <button disabled={page <= 1 || loading} onClick={() => loadDashboard(page - 1, pageSize)} className="rounded-md border border-slate-300 px-3 py-1.5 transition hover:bg-slate-50 disabled:opacity-50">Prev</button>
+              <button disabled={page >= totalPages || loading} onClick={() => loadDashboard(page + 1, pageSize)} className="rounded-md border border-slate-300 px-3 py-1.5 transition hover:bg-slate-50 disabled:opacity-50">Next</button>
             </div>
           </div>
         </div>

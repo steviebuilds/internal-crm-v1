@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CRM v1",
-  description: "Lightweight internal CRM",
+  title: "Wahlu CRM",
+  description: "Company-first CRM for outreach, follow-ups, and pipeline management.",
 };
 
 export default function RootLayout({
