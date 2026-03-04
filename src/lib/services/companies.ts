@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import { endOfDay, startOfDay } from "date-fns";
 import { connectDb } from "@/lib/db";
 import { COMPANY_STATUSES } from "@/lib/constants";
-import { normalizeLegacyLead, type NormalizedLegacyCompany } from "@/lib/legacy/lead-normalization";
 import { ActivityModel } from "@/lib/models/Activity";
 import { CompanyModel } from "@/lib/models/Company";
 import { PersonModel } from "@/lib/models/Person";
@@ -15,6 +14,24 @@ type CompanyFilters = {
   pageSize?: number;
 };
 
+const INVALID_COMPANY_NAME_TOKENS = new Set([
+  "-",
+  "—",
+  "n/a",
+  "na",
+  "unknown",
+  "null",
+  "undefined",
+  "none",
+]);
+
+function hasCanonicalCompanyName(value: unknown) {
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  return !INVALID_COMPANY_NAME_TOKENS.has(trimmed.toLowerCase());
+}
+
 function getSafePagination(page?: number, pageSize?: number) {
   const safePage = Number.isFinite(page) && (page as number) > 0 ? Math.floor(page as number) : 1;
   const safePageSize =
@@ -26,7 +43,13 @@ function getSafePagination(page?: number, pageSize?: number) {
 }
 
 function buildCompanyQuery(filters: CompanyFilters) {
-  const query: Record<string, unknown> = {};
+  const query: Record<string, unknown> = {
+    name: {
+      $exists: true,
+      $type: "string",
+      $nin: ["", "-", "—", "N/A", "n/a", "NA", "null", "undefined", "unknown", "Unknown"],
+    },
+  };
 
   if (filters.q?.trim()) {
     query.$text = { $search: filters.q.trim() };
@@ -36,76 +59,6 @@ function buildCompanyQuery(filters: CompanyFilters) {
   if (filters.priority) query.priority = filters.priority;
 
   return query;
-}
-
-function isLegacyFallbackEnabled() {
-  return process.env.ENABLE_LEGACY_LEADS_FALLBACK === "1";
-}
-
-function applyInMemoryFilters(
-  company: NormalizedLegacyCompany,
-  filters: CompanyFilters,
-) {
-  if (filters.status && company.status !== filters.status) return false;
-  if (filters.priority && company.priority !== filters.priority) return false;
-
-  if (filters.q?.trim()) {
-    const q = filters.q.trim().toLowerCase();
-    const haystack = [
-      company.name,
-      company.industry,
-      company.website,
-      company.notes,
-      ...company.emails,
-      ...company.phones,
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    if (!haystack.includes(q)) return false;
-  }
-
-  return true;
-}
-
-async function listFromLegacyLeads(filters: CompanyFilters) {
-  const db = mongoose.connection.db;
-  if (!db) return { companies: [], total: 0, skippedMissingName: 0 };
-
-  const collections = (await db.listCollections({ name: "leads" }).toArray()).map((c) => c.name);
-  if (!collections.includes("leads")) {
-    return { companies: [], total: 0, skippedMissingName: 0 };
-  }
-
-  const leads = db.collection("leads");
-  const rawDocs = await leads.find({}, { sort: { updatedAt: -1, _id: -1 } }).toArray();
-
-  const mapped: Record<string, unknown>[] = [];
-  let skippedMissingName = 0;
-
-  for (const doc of rawDocs) {
-    const normalized = normalizeLegacyLead(doc as Record<string, unknown>);
-    if (!normalized.ok) {
-      if (normalized.reason === "missing-name") skippedMissingName += 1;
-      continue;
-    }
-
-    if (!applyInMemoryFilters(normalized.company, filters)) {
-      continue;
-    }
-
-    mapped.push({
-      _id: doc._id,
-      ...normalized.company,
-    });
-  }
-
-  const { page, pageSize } = getSafePagination(filters.page, filters.pageSize);
-  const skip = (page - 1) * pageSize;
-
-  const companies = mapped.slice(skip, skip + pageSize);
-
-  return { companies, total: mapped.length, skippedMissingName };
 }
 
 export async function listCompanies(filters: CompanyFilters) {
@@ -130,19 +83,13 @@ export async function listCompanies(filters: CompanyFilters) {
     return findQuery;
   })();
 
-  // Legacy fallback is opt-in only to avoid serving schema-mismatched leads as companies.
-  if (total === 0 && isLegacyFallbackEnabled()) {
-    const legacy = await listFromLegacyLeads(filters);
-    if (legacy.total > 0) {
-      companies = legacy.companies as unknown as typeof companies;
-      total = legacy.total;
-    }
-
-    if (legacy.skippedMissingName > 0) {
-      console.warn(
-        `[companies] skipped ${legacy.skippedMissingName} legacy lead rows missing canonical company name`,
-      );
-    }
+  // Hotfix guard: ensure malformed rows never escape the API response.
+  const beforeGuard = companies.length;
+  companies = companies.filter((company) => hasCanonicalCompanyName((company as { name?: unknown }).name));
+  const dropped = beforeGuard - companies.length;
+  if (dropped > 0) {
+    total = Math.max(0, total - dropped);
+    console.warn(`[companies] dropped ${dropped} invalid company rows during hotfix canonical-name guard`);
   }
 
   const companyIds = companies.map((c) => c._id);

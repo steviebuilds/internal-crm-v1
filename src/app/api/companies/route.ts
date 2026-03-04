@@ -13,6 +13,24 @@ function parsePositiveInt(value: string | null, fallback: number) {
   return Math.floor(parsed);
 }
 
+const INVALID_COMPANY_NAME_TOKENS = new Set([
+  "-",
+  "—",
+  "n/a",
+  "na",
+  "unknown",
+  "null",
+  "undefined",
+  "none",
+]);
+
+function hasCanonicalCompanyName(value: unknown) {
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  return !INVALID_COMPANY_NAME_TOKENS.has(trimmed.toLowerCase());
+}
+
 export async function GET(req: Request) {
   if (!(await isAuthenticatedFromCookies())) return unauthorized();
 
@@ -26,12 +44,14 @@ export async function GET(req: Request) {
     const pageSize = parsePositiveInt(searchParams.get("pageSize"), 50);
 
     const { companies, pagination } = await listCompanies({ q, status, priority, page, pageSize });
+    const canonicalCompanies = companies.filter((company) => hasCanonicalCompanyName((company as { name?: unknown }).name));
 
     if (!withMeta) {
       return ok(
         serialize({
-          companies,
+          companies: canonicalCompanies,
           ...pagination,
+          total: canonicalCompanies.length < companies.length ? canonicalCompanies.length : pagination.total,
         }),
       );
     }
@@ -43,25 +63,16 @@ export async function GET(req: Request) {
 
     return ok(
       serialize({
-        companies,
+        companies: canonicalCompanies,
         pipeline,
         followUps,
         ...pagination,
+        total: canonicalCompanies.length < companies.length ? canonicalCompanies.length : pagination.total,
       }),
     );
   } catch (error) {
     const details = getErrorMessage(error);
-    return ok({
-      companies: [],
-      pipeline: [],
-      followUps: { overdue: [], dueToday: [] },
-      total: 0,
-      page: 1,
-      pageSize: 50,
-      totalPages: 1,
-      warning: "Mongo unavailable, serving empty CRM dataset.",
-      details,
-    });
+    return ok({ error: "Failed to load companies", details }, { status: 503 });
   }
 }
 
