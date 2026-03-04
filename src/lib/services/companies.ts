@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { endOfDay, startOfDay } from "date-fns";
 import { connectDb } from "@/lib/db";
 import { COMPANY_STATUSES } from "@/lib/constants";
@@ -36,6 +37,42 @@ function buildCompanyQuery(filters: CompanyFilters) {
   return query;
 }
 
+async function listFromLegacyLeads(filters: CompanyFilters) {
+  const db = mongoose.connection.db;
+  if (!db) return { companies: [], total: 0 };
+
+  const collections = (await db.listCollections({ name: "leads" }).toArray()).map((c) => c.name);
+  if (!collections.includes("leads")) {
+    return { companies: [], total: 0 };
+  }
+
+  const leads = db.collection("leads");
+  const query: Record<string, unknown> = {};
+
+  if (filters.status) query.status = filters.status;
+  if (filters.priority) query.priority = filters.priority;
+
+  if (filters.q?.trim()) {
+    const q = filters.q.trim();
+    query.$or = [
+      { name: { $regex: q, $options: "i" } },
+      { industry: { $regex: q, $options: "i" } },
+      { website: { $regex: q, $options: "i" } },
+      { notes: { $regex: q, $options: "i" } },
+      { emails: { $elemMatch: { $regex: q, $options: "i" } } },
+      { phones: { $elemMatch: { $regex: q, $options: "i" } } },
+    ];
+  }
+
+  const { page, pageSize } = getSafePagination(filters.page, filters.pageSize);
+  const skip = (page - 1) * pageSize;
+
+  const total = await leads.countDocuments(query);
+  const companies = await leads.find(query).sort({ updatedAt: -1, _id: -1 }).skip(skip).limit(pageSize).toArray();
+
+  return { companies, total };
+}
+
 export async function listCompanies(filters: CompanyFilters) {
   await connectDb();
 
@@ -43,18 +80,29 @@ export async function listCompanies(filters: CompanyFilters) {
   const { page, pageSize } = getSafePagination(filters.page, filters.pageSize);
   const skip = (page - 1) * pageSize;
 
-  const total = await CompanyModel.countDocuments(query);
+  let total = await CompanyModel.countDocuments(query);
 
-  const findQuery = CompanyModel.find(query).skip(skip).limit(pageSize).lean();
+  let companies = await (async () => {
+    const findQuery = CompanyModel.find(query).skip(skip).limit(pageSize).lean();
 
-  if (query.$text) {
-    findQuery.sort({ score: { $meta: "textScore" }, updatedAt: -1, _id: -1 });
-    findQuery.select({ score: { $meta: "textScore" } });
-  } else {
-    findQuery.sort({ updatedAt: -1, _id: -1 });
+    if (query.$text) {
+      findQuery.sort({ score: { $meta: "textScore" }, updatedAt: -1, _id: -1 });
+      findQuery.select({ score: { $meta: "textScore" } });
+    } else {
+      findQuery.sort({ updatedAt: -1, _id: -1 });
+    }
+
+    return findQuery;
+  })();
+
+  // Safety net for legacy deployments where data still sits in `leads`.
+  if (total === 0) {
+    const legacy = await listFromLegacyLeads(filters);
+    if (legacy.total > 0) {
+      companies = legacy.companies as unknown as typeof companies;
+      total = legacy.total;
+    }
   }
-
-  const companies = await findQuery;
 
   const companyIds = companies.map((c) => c._id);
   const primaryContacts = await PersonModel.find({
